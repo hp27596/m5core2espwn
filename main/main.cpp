@@ -3,7 +3,6 @@
 #include <esp_log.h>
 #include <M5Unified.h>
 
-#include <tb_display.h>
 #include "basic_func.hpp"
 // #include "freertos/portmacro.h"
 
