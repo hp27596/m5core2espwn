@@ -2,4 +2,5 @@
 # without default 'CMakeLists.txt' file.
 
 # set(SOURCES main.cpp basic_func.cpp)
-idf_component_register(SRCS main.cpp basic_func.cpp)
+idf_component_register(SRCS main.cpp basic_func.cpp wifi_ctrl.cpp
+                        INCLUDE_DIRS .)
