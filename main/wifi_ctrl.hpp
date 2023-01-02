@@ -1,5 +1,5 @@
 #pragma once
 
-extern "C" {
-    void start_wifi(void);
-}
+void wifi_mode(void);
+
+void wifi_control(void);

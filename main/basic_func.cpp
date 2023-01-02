@@ -30,54 +30,74 @@ void display_info(bool refr) {
     }
 }
 
-void reset_scr(void) {
+void clear_screen(void) {
     M5.Display.clearDisplay();
     M5.Display.setCursor(0,0);
     M5.Display.println();
     display_info(true);
 }
 
-short menu_choice = 1;
+
+short menu_choice = 0;
 bool menu_mode = false;
+bool app_mode = false;
+
+void power_off(void) {
+    M5.Power.powerOff();
+}
+
+MenuOption option[5] = {
+    {"Power off", "Powering off device", &power_off},
+    {"Wifi hacking", "Starting wifipwn", &wifi_mode, &wifi_control},
+
+
+};
+
+void launch_menu(void) {
+    clear_screen();
+    M5.Display.println("Opening menu");
+    for (int i = 0; i < ArraySize(option); i++) {
+        M5.Display.printf("%d . %s\n", i, option[i].name);
+        vTaskDelay(100);
+    }
+    menu_choice = 0;
+    M5.Display.printf("Press left and right to choose.\nChoosing Option: %d", menu_choice);
+    menu_mode = true;
+}
 
 void normal_control(void) {
     if (M5.BtnA.wasPressed()) {
-        reset_scr();
-        M5.Display.startWrite();
-
-        for (int i = 0; i < 30; i++) {
-            M5.Display.printf("Printing line on loc %d %d \n", M5.Display.getCursorX(), M5.Display.getCursorY());
-            vTaskDelay(100);
-        }
-        M5.Display.endWrite();
+        clear_screen();
+        M5.Display.println("Printing Info...");
     }
 
     if (M5.BtnB.wasPressed()) {
         M5.Display.println("Clearning screen...");
         vTaskDelay(300);
-        reset_scr();
+        clear_screen();
     }
 
     if (M5.BtnC.wasPressed()) {
-        reset_scr();
-        M5.Display.println("Opening menu");
-        for (int i = 0; i < ArraySize(CHOICE_NAME); i++) {
-            int j = i+1;
-            M5.Display.printf("%d . %s\n", j, CHOICE_NAME[i]);
-            vTaskDelay(100);
-        }
-        menu_choice = 1;
-        M5.Display.printf("Choosing Option: %d", menu_choice);
-        menu_mode = true;
+        clear_screen();
+        launch_menu();
     }
 }
 
 void menu_control(void) {
+    if (M5.BtnA.wasPressed()) {
+        M5.Display.setCursor(0, M5.Display.getCursorY());
+        if (menu_choice <= 0) {
+            menu_choice = ArraySize(option) - 1;
+        } else {
+            menu_choice--;
+        }
+        M5.Display.printf("Choosing Option: %d", menu_choice);
+    }
+
     if (M5.BtnC.wasPressed()) {
-        int line = M5.Display.getCursorY();
-        M5.Display.setCursor(0, line);
-        if (menu_choice >= ArraySize(CHOICE_NAME)) {
-            menu_choice = 1;
+        M5.Display.setCursor(0, M5.Display.getCursorY());
+        if (menu_choice >= ArraySize(option) - 1) {
+            menu_choice = 0;
         } else {
             menu_choice++;
         }
@@ -85,50 +105,36 @@ void menu_control(void) {
     }
 
     if (M5.BtnB.wasPressed()) {
-        M5.Display.printf("\nChosen %d\n", menu_choice);
+        M5.Display.printf("\n\nChosen %d\n%s\n", menu_choice, option[menu_choice].desc);
+        vTaskDelay(500);
+        option[menu_choice].run();
 
-        switch (menu_choice) {
-            case 1:
-                M5.Display.println("Exiting menu");
-                vTaskDelay(300);
-                reset_scr();
-                break;
-            case 2:
-                M5.Display.println("Start Wifi");
-                vTaskDelay(300);
-                reset_scr();
-                start_wifi();
-                break;
-            case 3:
-                M5.Display.println("Doing stuff");
-                break;
-            case 4:
-                break;
-        }
+        app_mode = true;
         menu_mode = false;
     }
 
-    if (M5.BtnA.wasPressed()) {
-        int line = M5.Display.getCursorY();
-        M5.Display.setCursor(0, line);
-        if (menu_choice <= 1) {
-            menu_choice = ArraySize(CHOICE_NAME);
-        } else {
-            menu_choice--;
-        }
-        M5.Display.printf("Choosing Option: %d", menu_choice);
-    }
 }
 
 void button_ctrl(void) {
-    if (M5.BtnPWR.wasClicked()) {
+    if (M5.BtnPWR.wasHold()) {
         M5.Display.println("Powering off device");
+        vTaskDelay(300);
         M5.Power.powerOff();
     }
 
-    if (!menu_mode) {
-        normal_control();
-    } else {
+    if (M5.BtnPWR.wasClicked()) {
+        M5.Display.println("Restarting device");
+        vTaskDelay(300);
+        esp_restart();
+    }
+
+    // button state
+    if (app_mode) {
+        option[menu_choice].control();
+    } else if (menu_mode) {
         menu_control();
+    } else {
+        normal_control();
     }
 }
+
